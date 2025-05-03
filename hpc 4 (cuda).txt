@@ -1,0 +1,63 @@
+//Problem statement Write a CUDA Program for : 1. Addition of two large vectors 2. Matrix Multiplication using CUDA C 
+
+#include <iostream>
+#include <cuda_runtime.h>
+
+// CUDA kernel for vector addition
+__global__ void vectorAdd(int* a, int* b, int* c, int size) {
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid < size) {
+        c[tid] = a[tid] + b[tid];
+    }
+}
+
+int main() {
+    int size = 100;
+    int bytes = size * sizeof(int);
+
+    // Host memory allocation
+    int* h_a = (int*)malloc(bytes);
+    int* h_b = (int*)malloc(bytes);
+    int* h_c = (int*)malloc(bytes);
+
+    // Initialize host arrays
+    for (int i = 0; i < size; i++) {
+        h_a[i] = i;
+        h_b[i] = 2 * i;
+    }
+
+    // Device memory allocation
+    int* d_a, * d_b, * d_c;
+    cudaMalloc((void**)&d_a, bytes);
+    cudaMalloc((void**)&d_b, bytes);
+    cudaMalloc((void**)&d_c, bytes);
+
+    // Copy host to device
+    cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    // Kernel launch configuration
+    int blockSize = 256;
+    int gridSize = (size + blockSize - 1) / blockSize;
+
+    // Launch kernel
+    vectorAdd<<<gridSize, blockSize>>>(d_a, d_b, d_c, size);
+
+    // Copy result back to host
+    cudaMemcpy(h_c, d_c, bytes, cudaMemcpyDeviceToHost);
+
+    // Print results
+    for (int i = 0; i < size; i++) {
+        std::cout << h_a[i] << " + " << h_b[i] << " = " << h_c[i] << std::endl;
+    }
+
+    // Cleanup
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+    free(h_a);
+    free(h_b);
+    free(h_c);
+
+    return 0;
+}
